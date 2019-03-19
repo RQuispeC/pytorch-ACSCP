@@ -227,7 +227,7 @@ class ACSCP(nn.Module):
 			fake_l_logits, _ = self.d_large(g_l)
 		else: # use fake and grount thruth maps
 			fake_l_logits, _ = self.d_large(g_l)
-			real_l_logits, _ = self.d_large(inputs_d_l)
+			real_l_logits, _ = self.d_large(targets)
 
 		# forward d_small
 		real_s_logits = []
@@ -243,4 +243,4 @@ class ACSCP(nn.Module):
 			fake_s_logits.append(fake_s_logits_item)
 			real_s_logits.append(real_s_logits_item)
 
-		return g_l, g_s, targets, targets_chunks, real_l_logits, real_s_logits, fake_l_logits, fake_s_logits, density_joined
+		return g_l, g_s, targets, targets_chunks, real_l_logits, real_s_logits, fake_l_logits, fake_s_logits
