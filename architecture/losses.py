@@ -37,9 +37,7 @@ class Perceptual(nn.Module):
 
   def vgg_feature(self, x):
     # x has only one channel and vgg expects 3
-    print("---->yy ", x.size())
     x = torch.cat((x, x, x), dim = 1)
-    print("---->pp ", x.size())
 
     for name, layer in self.vgg_layers._modules.items():
       x = layer(x)
