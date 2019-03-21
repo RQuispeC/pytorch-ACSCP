@@ -112,7 +112,10 @@ def train(train_test_unit, out_dir_root):
     net.cuda()
     net.train()
 
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=lr)
+    optimizer_d_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_large.parameters()), lr=lr)
+    optimizer_d_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_small.parameters()), lr=lr)
+    optimizer_g_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_large.parameters()), lr=lr)
+    optimizer_g_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_small.parameters()), lr=lr)
 
     # training
     train_loss = 0
@@ -129,25 +132,43 @@ def train(train_test_unit, out_dir_root):
 
     for epoch in range(start_step, end_step+1):
         step = 0
-        train_loss = 0
+        train_loss_gen_small = 0
+        train_loss_gen_large = 0
+        train_loss_dis_small = 0
+        train_loss_dis_large = 0
+
         for blob in data_loader:
             step = step + args.train_batch
             im_data = blob['data']
             gt_data = blob['gt_density']
-
             idx_data = blob['idx']
-            if step % 4 == 3:
-                mode = "discriminator"
-            else:
-                mode = "generator"
-            density_map = net(im_data, gt_data, epoch = epoch, mode = mode)
 
-            loss = net.loss
-            train_loss += loss.data.item()
+            optimizer_d_large.zero_grad()
+            optimizer_d_small.zero_grad()
+            density_map = net(im_data, gt_data, epoch = epoch, mode = "discriminator")
+            loss_d_small = net.loss_dis_small
+            loss_d_large = net.loss_dis_large
+            loss_d_small.backward()
+            loss_d_large.backward()
+            optimizer_d_small.step()
+            optimizer_d_large.step()
+
+            optimizer_g_large.zero_grad()
+            optimizer_g_small.zero_grad()
+            density_map = net(im_data, gt_data, epoch = epoch, mode = "generator")
+            loss_g_small = net.loss_gen_small
+            loss_g_large = net.loss_gen_large
+            loss_g = net.loss_gen
+            loss_g.backward() # loss_g_large + loss_g_small
+            optimizer_g_small.step()
+            optimizer_g_large.step()
+
+            train_loss_gen_small += loss_g_small.data.item()
+            train_loss_gen_large += loss_g_large.data.item()
+            train_loss_dis_small += loss_d_small.data.item()
+            train_loss_dis_large += loss_d_large.data.item()
+
             step_cnt += 1
-            optimizer.zero_grad()
-            loss.backward()
-
             if step % disp_interval == 0:
                 duration = t.toc(average=False)
                 fps = step_cnt / duration
@@ -159,7 +180,7 @@ def train(train_test_unit, out_dir_root):
                     plot_save_dir = osp.join(output_dir, 'plot-results-train/')
                     mkdir_if_missing(plot_save_dir)
                     utils.save_results(im_data, gt_data, density_map, idx_data, plot_save_dir, loss = args.loss)
-                
+
                 print("epoch: {0}, step {1}/{5}, Time: {2:.4f}s, gt_cnt: {3:.4f}, et_cnt: {4:.4f}, mean_diff: {6:.4f}".format(epoch, step, 1./fps, gt_count[0],et_count[0], data_loader.num_samples, np.mean(np.abs(gt_count - et_count))))
                 re_cnt = True
         
@@ -178,7 +199,7 @@ def train(train_test_unit, out_dir_root):
             best_model = '{}_{}_{}.h5'.format(train_test_unit.to_string(),dataset_name,epoch)
             network.save_net(os.path.join(output_dir, "best_model.h5"), net)
 
-        print("Epoch: {0}, MAE: {1:.4f}, MSE: {2:.4f}, loss: {3:.4f}".format(epoch, mae, mse, train_loss))
+        print("Epoch: {0}, MAE: {1:.4f}, MSE: {2:.4f}, loss gen small: {3:.4f}, loss gen large: {4:.4f}, loss dis small: {5:.4f}, loss dis large: {6:.4f}, loss: {7:.4f}".format(epoch, mae, mse, train_loss_gen_small, train_loss_gen_large, train_loss_dis_small, train_loss_dis_large, train_loss_gen_small + train_loss_gen_large + train_loss_dis_small + train_loss_dis_large))
         print("Best MAE: {0:.4f}, Best MSE: {1:.4f}, Best model: {2}".format(best_mae, best_mse, best_model))
 
 def test(train_test_unit, out_dir_root):

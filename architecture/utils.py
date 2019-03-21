@@ -15,7 +15,7 @@ def save_results(img, gt_density_map, et_density_map, idx, output_dir):
     idx = idx[0]
     img = img[0, 0]
     gt_density_map = np.array(gt_density_map[0, 0])
-    et_density_map = et_density_map[0, 0].cpu().detach().numpy()
+    et_density_map = et_density_map[0, 0]
     gt_count = np.sum(gt_density_map)
     et_count = np.sum(et_density_map)
     maxi = gt_density_map.max()

@@ -30,6 +30,7 @@ def evaluate_model(trained_model, data_loader, epoch = 0, save_test_results = Fa
         mse += ((gt_count-et_count)*(gt_count-et_count))
         
         if save_test_results:
+            print("Plotting results")
             mkdir_if_missing(plot_save_dir)
             utils.save_results(im_data, gt_data, density_map, idx_data, plot_save_dir)
 

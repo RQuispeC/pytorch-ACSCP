@@ -168,11 +168,11 @@ class G_Small(nn.Module):
 class discriminator(nn.Module):
 	def __init__(self):
 		super(discriminator, self).__init__()
-		self.f_1 = Conv2d(1, 48, 4, stride = 2, bn = True, activation = 'leakyrelu', dropout=False)
+		self.f_1 = Conv2d(2, 48, 4, stride = 2, bn = True, activation = 'leakyrelu', dropout=False)
 		self.f_2 = Conv2d(48,96, 4, stride = 2, bn = True, activation = 'leakyrelu', dropout=False)
 		self.f_3 = Conv2d(96, 192, 4, stride = 2, bn = True, activation = 'leakyrelu', dropout=False)
-		self.f_4 = Conv2d(192, 381, 3, stride = 1, bn = True, activation = 'leakyrelu', dropout=False)
-		self.f_5 = Conv2d(381, 1, 3, stride = 1, bn = True, activation = 'leakyrelu', dropout=False)
+		self.f_4 = Conv2d(192, 384, 3, stride = 1, bn = True, activation = 'leakyrelu', dropout=False)
+		self.f_5 = Conv2d(384, 1, 3, stride = 1, bn = True, activation = 'leakyrelu', dropout=False)
 
 	def forward(self, x):
 		x = self.f_1(x)
@@ -182,7 +182,7 @@ class discriminator(nn.Module):
 		x = self.f_5(x)
 
 		logits = F.avg_pool2d(x, x.size()[2:])
-		logits = logits.view(logits.size(0), -1)
+		logits = logits.view(-1)
 		y = F.tanh(logits)
 		return logits, y
 
@@ -194,53 +194,24 @@ class ACSCP(nn.Module):
 		self.d_large = discriminator()
 		self.d_small = discriminator()
 
-
-	def forward(self, inputs, targets, mode = "generator"):
-		assert mode in list(["discriminator", "generator"]), ValueError("Invalid network mode '{}'".format(mode))
-
-		# forward g_large
+	def generator_large(self, inputs):
 		g_l = self.g_large(inputs)
-		if not self.training:
-			return g_l
+		return g_l
 
-		# create chunks
-		chunks = torch.chunk(inputs, chunks = 2, dim = 2)
-		inputs_1, inputs_2 = torch.chunk(chunks[0], chunks = 2, dim = 3)
-		inputs_3, inputs_4 = torch.chunk(chunks[1], chunks = 2, dim = 3)
-		
-		chunks = torch.chunk(targets, chunks = 2, dim = 2)
-		targets_1, targets_2 = torch.chunk(chunks[0], chunks = 2, dim = 3)
-		targets_3, targets_4 = torch.chunk(chunks[1], chunks = 2, dim = 3)
-
-		inputs_chunks = list([inputs_1, inputs_2, inputs_3, inputs_4])
-		targets_chunks = list([targets_1, targets_2, targets_3, targets_4])
-
-		# forward g_small
+	def generator_small(self, inputs_chunks):
 		g_s = []
 		for chunk in inputs_chunks:
 			g_s.append(self.g_small(chunk))
+		return g_s
 
-		# forward d_large
-		real_l_logits = None
-		fake_l_logits = None
-		if mode == "generator": # use only fake/generated maps
-			fake_l_logits, _ = self.d_large(g_l)
-		else: # use fake and grount thruth maps
-			fake_l_logits, _ = self.d_large(g_l)
-			real_l_logits, _ = self.d_large(targets)
+	def discriminator_large(self, imgs, dens):
+		logits, _ = self.d_large(torch.cat((imgs, dens), dim = 1))
+		return logits
 
-		# forward d_small
-		real_s_logits = []
-		fake_s_logits = []
-		for real, fake in zip(targets_chunks, g_s):
-			if mode == "generator": # use only fake/generated maps
-				fake_s_logits_item, _ = self.d_small(fake)
-				real_s_logits_item = None
-			else: # use fake and grount thruth maps
-				fake_s_logits_item, _ = self.d_small(fake)
-				real_s_logits_item, _ = self.d_small(real)
+	def discriminator_small(self, imgs, dens):
+		logits = []
+		for img, den in zip(imgs, dens):
+			logit, _ = self.d_small(torch.cat((img, den), dim=1))
+			logits.append(logit)
+		return logits
 
-			fake_s_logits.append(fake_s_logits_item)
-			real_s_logits.append(real_s_logits_item)
-
-		return g_l, g_s, targets, targets_chunks, real_l_logits, real_s_logits, fake_l_logits, fake_s_logits
