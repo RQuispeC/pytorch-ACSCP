@@ -48,10 +48,12 @@ parser.add_argument('--max-epoch', default=1200, type=int,
                     help="maximum epochs to run")
 parser.add_argument('--start-epoch', default=0, type=int,
                     help="manual epoch number (useful on restarts)")
-parser.add_argument('--lr', '--learning-rate', default=0.00001, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.00005, type=float,
                     help="initial learning rate")
-parser.add_argument('--mm', '--momentum', default=0.9, type=float,
-                    help="training momentum")
+parser.add_argument('--beta1', default=0.5, type=float,
+                    help="training b1 for adam optimizer")
+parser.add_argument('--beta2', default=0.999, type=float,
+                    help="training b2 for adam optimizer")
 parser.add_argument('--train-batch', default=32, type=int,
                     help="train batch size (default 32)")
 # Miscs
@@ -84,7 +86,6 @@ def train(train_test_unit, out_dir_root):
     start_step = args.start_epoch
     end_step = args.max_epoch
     lr = args.lr
-    momentum = args.mm
 
     #log frequency
     disp_interval = args.train_batch*20
@@ -105,17 +106,17 @@ def train(train_test_unit, out_dir_root):
         if args.resume[-3:] == '.h5':
             pretrained_model = args.resume
         else:
-            resume_dir = osp.join(args.resume, train_test_unit.metadata['name'])
+            resume_dir = osp.join(args.resume, pu.metadata['name'])
             pretrained_model = osp.join(resume_dir, 'best_model.h5')
         network.load_net(pretrained_model, net)
         print('Will apply fine tunning over', pretrained_model)
     net.cuda()
     net.train()
 
-    optimizer_d_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_large.parameters()), lr=lr)
-    optimizer_d_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_small.parameters()), lr=lr)
-    optimizer_g_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_large.parameters()), lr=lr)
-    optimizer_g_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_small.parameters()), lr=lr)
+    optimizer_d_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_d_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_g_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_g_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
 
     # training
     train_loss = 0
@@ -143,16 +144,6 @@ def train(train_test_unit, out_dir_root):
             gt_data = blob['gt_density']
             idx_data = blob['idx']
 
-            optimizer_d_large.zero_grad()
-            optimizer_d_small.zero_grad()
-            density_map = net(im_data, gt_data, epoch = epoch, mode = "discriminator")
-            loss_d_small = net.loss_dis_small
-            loss_d_large = net.loss_dis_large
-            loss_d_small.backward()
-            loss_d_large.backward()
-            optimizer_d_small.step()
-            optimizer_d_large.step()
-
             optimizer_g_large.zero_grad()
             optimizer_g_small.zero_grad()
             density_map = net(im_data, gt_data, epoch = epoch, mode = "generator")
@@ -162,6 +153,16 @@ def train(train_test_unit, out_dir_root):
             loss_g.backward() # loss_g_large + loss_g_small
             optimizer_g_small.step()
             optimizer_g_large.step()
+
+            optimizer_d_large.zero_grad()
+            optimizer_d_small.zero_grad()
+            density_map_d = net(im_data, gt_data, epoch = epoch, mode = "discriminator")
+            loss_d_small = net.loss_dis_small
+            loss_d_large = net.loss_dis_large
+            loss_d_small.backward()
+            loss_d_large.backward()
+            optimizer_d_small.step()
+            optimizer_d_large.step()
 
             train_loss_gen_small += loss_g_small.data.item()
             train_loss_gen_large += loss_g_large.data.item()
