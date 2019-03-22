@@ -22,7 +22,7 @@ class CrowdCounter(nn.Module):
 		self.loss_dis_large = 0.0
 		self.loss_dis_small = 0.0
 
-	def adv_loss_generator_large(self, inputs, gt_data): #adversarial loss for g_large
+	def adv_loss_generator_large(self, inputs): #adversarial loss for g_large
 		batch_size, _, _, _ = inputs.size()
 		x = self.GAN.generator_large(inputs)
 		fake_logits = self.GAN.discriminator_large(inputs, x)
@@ -31,7 +31,7 @@ class CrowdCounter(nn.Module):
 		loss = F.binary_cross_entropy_with_logits(fake_logits, ones)
 		return x, loss
 	
-	def adv_loss_generator_small(self, inputs_chunks, gt_data_chunks): #adversarial loss for g_small
+	def adv_loss_generator_small(self, inputs_chunks): #adversarial loss for g_small
 		batch_size, _, _, _ = inputs_chunks[0].size()
 		x = self.GAN.generator_small(inputs_chunks)
 		fake_logits = self.GAN.discriminator_small(inputs_chunks, x)
@@ -113,12 +113,12 @@ class CrowdCounter(nn.Module):
 			inputs_chunks, gt_data_chunks = self.chunk_input(inputs, gt_data)
 			if mode == "generator":
 				# g_large
-				x_l, self.loss_gen_large = self.adv_loss_generator_large(inputs, gt_data)
+				x_l, self.loss_gen_large = self.adv_loss_generator_large(inputs)
 				self.loss_gen_large += self.alpha_euclidean * self.euclidean_loss(x_l, gt_data)
 				self.loss_gen_large += self.alpha_perceptual * self.perceptual_loss(x_l, gt_data)
 
 				# g_small
-				x_s, self.loss_gen_small = self.adv_loss_generator_small(inputs_chunks, gt_data_chunks)
+				x_s, self.loss_gen_small = self.adv_loss_generator_small(inputs_chunks)
 				self.loss_gen_small += self.alpha_euclidean * self.euclidean_loss(x_s, gt_data_chunks)
 				self.loss_gen_small += self.alpha_perceptual * self.perceptual_loss(x_s, gt_data_chunks)
 
