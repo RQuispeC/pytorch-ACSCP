@@ -97,12 +97,12 @@ def plot_loss(log_file, out_file, out_options = '1'):
     if line.startswith("Epoch:"):
       for item in line.split(","):
         item = item.strip()
-        num = float(item.split()[1])
+        num = float(item.split()[-1])
         if item.startswith("MAE"):
           mae.append(num)
         elif item.startswith("MSE"):
           mse.append(num)
-        elif item.startswith("loss"):
+        elif item.startswith("loss:"):
           loss.append(num) 
   assert len(loss) == len(mse) and len(mae) == len(mse), "Error in vector sizes mae: {}, mse: {}, loss: {}".format(len(mae), len(mse), len(loss))
   epoch = np.arange(len(loss))
@@ -125,6 +125,6 @@ if __name__ == "__main__":
 
   #plot_img_gt()
 
-  log_file = 'log/mcnn-not-normalized/ucf-cc-50_people_thr_20_gt_mode_same_clahe_False/ucf-fold1/log_train.txt'
-  out_file = 'log/mcnn-not-normalized/ucf-cc-50_people_thr_20_gt_mode_same_clahe_False/ucf-fold1/log_train_mse_mae.png'
-  plot_loss(log_file, out_file, out_options = '3')
+  log_file = 'log/ACSCP/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold1/log_train.txt'
+  out_file = 'log/ACSCP/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold1/log_train_loss_mae_mse.png'
+  plot_loss(log_file, out_file, out_options = '1')
