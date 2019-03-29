@@ -27,10 +27,6 @@ parser = argparse.ArgumentParser(description='Train crowd counting network using
 parser.add_argument('-d', '--dataset', type=str, default='ucf',
                     choices=dataset_loader.get_names())
 #Data augmentation hyperpameters
-parser.add_argument('--height', type=int, default=256,
-                    help="height of an image (default: 256)")
-parser.add_argument('--width', type=int, default=128,
-                    help="width of an image (default: 128)")
 parser.add_argument('--force-den-maps', action='store_true', help="force generation of dentisity maps for original dataset, by default it is generated only once")
 parser.add_argument('--force-augment', action='store_true', help="force generation of augmented data, by default it is generated only once")
 parser.add_argument('--displace', default=70, type=int,help="displacement for sliding window in data augmentation, default 70")
@@ -57,6 +53,8 @@ parser.add_argument('--beta2', default=0.999, type=float,
 parser.add_argument('--train-batch', default=32, type=int,
                     help="train batch size (default 32)")
 # Miscs
+parser.add_argument('--den-factor', type=float, default=1e3, help="factor to multiply for density maps to avoid too small values")
+parser.add_argument('--overlap-test', action='store_true', help="overlap the sliding windows for test")
 parser.add_argument('--seed', type=int, default=64678, help="manual seed")
 parser.add_argument('--resume', type=str, default='', metavar='PATH', help="root directory where part/fold of previous train are saved")
 parser.add_argument('--save-dir', type=str, default='log', help="path where results for each part/fold are saved")
@@ -113,10 +111,10 @@ def train(train_test_unit, out_dir_root):
     net.cuda()
     net.train()
 
-    optimizer_d_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
-    optimizer_d_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.d_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
-    optimizer_g_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
-    optimizer_g_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.GAN.g_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_d_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.d_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_d_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.d_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_g_large = torch.optim.Adam(filter(lambda p: p.requires_grad, net.g_large.parameters()), lr=lr, betas = (args.beta1, args.beta2))
+    optimizer_g_small = torch.optim.Adam(filter(lambda p: p.requires_grad, net.g_small.parameters()), lr=lr, betas = (args.beta1, args.beta2))
 
     # training
     train_loss = 0
@@ -126,9 +124,10 @@ def train(train_test_unit, out_dir_root):
     t.tic()
 
     #preprocess flags
+    overlap_test = True if args.overlap_test else False
 
-    data_loader = ImageDataLoader(train_path, train_gt_path, shuffle=True, batch_size = args.train_batch)
-    data_loader_val = ImageDataLoader(val_path, val_gt_path, shuffle=False, batch_size = 1)
+    data_loader = ImageDataLoader(train_path, train_gt_path, shuffle=True, batch_size = args.train_batch, test_loader = False)
+    data_loader_val = ImageDataLoader(val_path, val_gt_path, shuffle=False, batch_size = 1, test_loader = True, img_width = args.size_x, img_height = args.size_y, test_overlap = overlap_test)
     best_mae = sys.maxsize
 
     for epoch in range(start_step, end_step+1):
@@ -143,20 +142,12 @@ def train(train_test_unit, out_dir_root):
             im_data = blob['data']
             gt_data = blob['gt_density']
             idx_data = blob['idx']
-
-            optimizer_g_large.zero_grad()
-            optimizer_g_small.zero_grad()
-            density_map = net(im_data, gt_data, epoch = epoch, mode = "generator")
-            loss_g_small = net.loss_gen_small
-            loss_g_large = net.loss_gen_large
-            loss_g = net.loss_gen
-            loss_g.backward() # loss_g_large + loss_g_small
-            optimizer_g_small.step()
-            optimizer_g_large.step()
+            im_data_norm = im_data / 127.5 - 1. #normalize between -1 and 1
+            gt_data = gt_data * args.den_factor
 
             optimizer_d_large.zero_grad()
             optimizer_d_small.zero_grad()
-            density_map_d = net(im_data, gt_data, epoch = epoch, mode = "discriminator")
+            density_map = net(im_data_norm, gt_data, epoch = epoch, mode = "discriminator")
             loss_d_small = net.loss_dis_small
             loss_d_large = net.loss_dis_large
             loss_d_small.backward()
@@ -164,6 +155,19 @@ def train(train_test_unit, out_dir_root):
             optimizer_d_small.step()
             optimizer_d_large.step()
 
+            optimizer_g_large.zero_grad()
+            optimizer_g_small.zero_grad()
+            density_map = net(im_data_norm, gt_data, epoch = epoch, mode = "generator")
+            loss_g_small = net.loss_gen_small
+            loss_g_large = net.loss_gen_large
+            loss_g = net.loss_gen
+            loss_g.backward() # loss_g_large + loss_g_small
+            optimizer_g_small.step()
+            optimizer_g_large.step()
+ 
+            density_map /= args.den_factor
+            gt_data /= args.den_factor
+            
             train_loss_gen_small += loss_g_small.data.item()
             train_loss_gen_large += loss_g_large.data.item()
             train_loss_dis_small += loss_d_small.data.item()
@@ -193,7 +197,7 @@ def train(train_test_unit, out_dir_root):
         network.save_net(save_name, net)
 
         #calculate error on the validation dataset 
-        mae,mse = evaluate_model(save_name, data_loader_val, epoch = epoch)
+        mae,mse = evaluate_model(save_name, data_loader_val, epoch = epoch, den_factor = args.den_factor)
         if mae < best_mae:
             best_mae = mae
             best_mse = mse
@@ -223,8 +227,10 @@ def test(train_test_unit, out_dir_root):
             pretrained_model = osp.join(resume_dir, 'best_model.h5')
     print("Using {} for testing.".format(pretrained_model))
 
-    data_loader = ImageDataLoader(val_path, val_gt_path, shuffle=False)
-    mae,mse = evaluate_model(pretrained_model, data_loader, save_test_results=args.save_plots, plot_save_dir=osp.join(output_dir, 'plot-results-test/'))
+    overlap_test = True if args.overlap_test else False
+
+    data_loader = ImageDataLoader(val_path, val_gt_path, shuffle=False, batch_size = 1, test_loader = True, img_width = args.size_x, img_height = args.size_y, test_overlap = overlap_test)
+    mae,mse = evaluate_model(pretrained_model, data_loader, save_test_results=args.save_plots, plot_save_dir=osp.join(output_dir, 'plot-results-test/'), den_factor = args.den_factor)
 
     print("MAE: {0:.4f}, MSE: {1:.4f}".format(mae, mse))
 
