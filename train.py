@@ -178,8 +178,9 @@ def train(train_test_unit, out_dir_root):
                 duration = t.toc(average=False)
                 fps = step_cnt / duration
                 density_map = density_map.data.cpu().numpy()
-                gt_count = np.sum(gt_data.reshape(args.train_batch, -1), axis = 1)
-                et_count = np.sum(density_map.reshape(args.train_batch, -1), axis = 1)
+                train_batch_size = gt_data.shape[0]
+                gt_count = np.sum(gt_data.reshape(train_batch_size, -1), axis = 1)
+                et_count = np.sum(density_map.reshape(train_batch_size, -1), axis = 1)
                 
                 if args.save_plots:
                     plot_save_dir = osp.join(output_dir, 'plot-results-train/')
