@@ -51,8 +51,7 @@ class train_test_unit(object):
 """Crowd counting dataset"""
 
 class UCF_CC_50(object):
-    #root = 'data/ucf_cc_50/'
-    root = '/workspace/quispe/ucf_cc_50/'
+    root = 'data/ucf_cc_50/'
     ori_dir = osp.join(root, 'UCF_CC_50')
     ori_dir_lab = osp.join(ori_dir, 'labels')
     ori_dir_img = osp.join(ori_dir, 'images')
