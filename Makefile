@@ -1,8 +1,3 @@
-train:
-	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 16 --units ucf-fold1 --save-dir log/tmp --overlap-test
-test:
-	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 16 --units ucf-fold1 --save-dir log/tmp --evaluate-only --resume log/tmp/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold1/best_model.h5 --save-plots --overlap-test
-
 train-ucf-fold1:
 	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 24 --units ucf-fold1 --save-dir log/ACSCP 
 train-ucf-fold2:
@@ -14,7 +9,7 @@ train-ucf-fold4:
 train-ucf-fold5:
 	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 24 --units ucf-fold5 --save-dir log/ACSCP
 test-ucf-fold1:
-	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 16 --units ucf-fold1 --save-dir log/ACSCP --evaluate-only --resume log/ACSCP/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold1/best_model.h5 --save-plots --overlap-test
+	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 16 --units ucf-fold1 --save-dir log/ACSCP --evaluate-only --resume log/ACSCP/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold1/best_model.h5 --save-plots 
 test-ucf-fold2:
 	python3 train.py -d ucf-cc-50 --gt-mode same --people-thr 20 --train-batch 16 --units ucf-fold2 --save-dir log/ACSCP --evaluate-only --resume log/ACSCP/ucf-cc-50_people_thr_20_gt_mode_same/ucf-fold2/best_model.h5 --save-plots --overlap-test
 test-ucf-fold3:
