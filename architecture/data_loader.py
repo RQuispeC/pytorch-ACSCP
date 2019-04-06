@@ -78,7 +78,6 @@ class ImageDataLoader():
                             chunk_den = chunk_den.reshape((1, chunk_den.shape[0], chunk_den.shape[1]))
                             imgs.append(chunk_img)
                             dens.append(chunk_den)
-                    #print("imgs dens ", idx, np.array(imgs).shape, np.array(dens).shape)
                 else:
                     imgs.append(img)
                     dens.append(den)

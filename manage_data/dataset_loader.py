@@ -57,8 +57,7 @@ class UCF_CC_50(object):
     ori_dir_lab = osp.join(ori_dir, 'labels')
     ori_dir_img = osp.join(ori_dir, 'images')
 
-    ori_dir_den = osp.join(ori_dir, 'density_maps') #.npy files of density maps matrixes
-    ori_dir_fac = osp.join(ori_dir, 'faces') #.npy files for detected faces
+    ori_dir_den = osp.join(ori_dir, 'density_maps') #.npy files of density maps matrices
     augmented_dir = ""
     train_test_set = []
     signature_args = ['people_thr', 'gt_mode']
@@ -76,7 +75,7 @@ class UCF_CC_50(object):
             os.makedirs(self.ori_dir_den)
         elif not force_create_den_maps:
             return
-        create_density_map(self.ori_dir_img, self.ori_dir_lab, self.ori_dir_den, self.ori_dir_fac, mode = self.metadata['gt_mode'])
+        create_density_map(self.ori_dir_img, self.ori_dir_lab, self.ori_dir_den, mode = self.metadata['gt_mode'])
 
     def _check_before_run(self):
         """Check if all files are available before going deeper"""
@@ -172,21 +171,17 @@ class ShanghaiTech(object):
     ori_dir_partA_train = osp.join(ori_dir_partA, 'train_data')
     ori_dir_partA_train_mat = osp.join(ori_dir_partA_train, 'ground-truth')
     ori_dir_partA_train_img = osp.join(ori_dir_partA_train, 'images')
-    ori_dir_partA_train_fac = osp.join(ori_dir_partA_train, 'faces')
     ori_dir_partA_test = osp.join(ori_dir_partA, 'test_data')
     ori_dir_partA_test_mat = osp.join(ori_dir_partA_test, 'ground-truth')
     ori_dir_partA_test_img = osp.join(ori_dir_partA_test, 'images')
-    ori_dir_partA_test_fac = osp.join(ori_dir_partA_test, 'faces')
 
     ori_dir_partB = osp.join(root, 'part_B')
     ori_dir_partB_train = osp.join(ori_dir_partB, 'train_data')
     ori_dir_partB_train_mat = osp.join(ori_dir_partB_train, 'ground-truth')
     ori_dir_partB_train_img = osp.join(ori_dir_partB_train, 'images')
-    ori_dir_partB_train_fac = osp.join(ori_dir_partB_train, 'faces')
     ori_dir_partB_test = osp.join(ori_dir_partB, 'test_data')
     ori_dir_partB_test_mat = osp.join(ori_dir_partB_test, 'ground-truth')
     ori_dir_partB_test_img = osp.join(ori_dir_partB_test, 'images')
-    ori_dir_partB_test_fac = osp.join(ori_dir_partB_test, 'faces')
 
     #to be computed
     ori_dir_partA_train_lab = osp.join(ori_dir_partA_train, 'labels')
@@ -225,10 +220,10 @@ class ShanghaiTech(object):
             mkdir_if_missing(self.ori_dir_partB_test_den)
         elif not force_create_den_maps:
             return
-        create_density_map(self.ori_dir_partA_train_img, self.ori_dir_partA_train_lab, self.ori_dir_partA_train_den, self.ori_dir_partA_train_fac, mode = self.metadata['gt_mode'])
-        create_density_map(self.ori_dir_partA_test_img, self.ori_dir_partA_test_lab, self.ori_dir_partA_test_den, self.ori_dir_partA_test_fac, mode = self.metadata['gt_mode'])
-        create_density_map(self.ori_dir_partB_train_img, self.ori_dir_partB_train_lab, self.ori_dir_partB_train_den, self.ori_dir_partB_train_fac, mode = self.metadata['gt_mode'])
-        create_density_map(self.ori_dir_partB_test_img, self.ori_dir_partB_test_lab, self.ori_dir_partB_test_den, self.ori_dir_partB_test_fac, mode = self.metadata['gt_mode'])
+        create_density_map(self.ori_dir_partA_train_img, self.ori_dir_partA_train_lab, self.ori_dir_partA_train_den, mode = self.metadata['gt_mode'])
+        create_density_map(self.ori_dir_partA_test_img, self.ori_dir_partA_test_lab, self.ori_dir_partA_test_den, mode = self.metadata['gt_mode'])
+        create_density_map(self.ori_dir_partB_train_img, self.ori_dir_partB_train_lab, self.ori_dir_partB_train_den, mode = self.metadata['gt_mode'])
+        create_density_map(self.ori_dir_partB_test_img, self.ori_dir_partB_test_lab, self.ori_dir_partB_test_den, mode = self.metadata['gt_mode'])
 
     def _check_before_run(self):
         """Check if all files are available before going deeper"""
@@ -378,61 +373,11 @@ class ShanghaiTech(object):
             ori_den_paths = [osp.join(self.ori_dir_partB_train_den, file_name) for file_name in sorted(os.listdir(self.ori_dir_partB_train_den))]
             augment(ori_img_paths, ori_lab_paths, ori_den_paths, aug_dir_partB_img, aug_dir_partB_lab, aug_dir_partB_den, slide_window_params, noise_params, light_params)
 
-class random_background(object):
-    root = 'data/random_backgrounds/'
-    ori_dir = osp.join(root, 'raw')
-    ori_dir_lab = osp.join(ori_dir, 'labels')
-    ori_dir_img = osp.join(ori_dir, 'images')
-
-    ori_dir_den = osp.join(ori_dir, 'density_maps') #.npy files of density maps matrixes
-    augmented_dir = ""
-    train_test_set = []
-    signature_args = ['name']
-    metadata = dict()
-    train_test_size = 5
-    
-    def __init__(self, force_create_den_maps = False, force_augmentation = False, **kwargs):
-        self._check_before_run()
-        self.metadata = {'name':'raw'}
-        self._create_original_density_maps(force_create_den_maps)
-        self._create_train_test(force_augmentation, {'name':'raw'})
-
-    def _create_original_density_maps(self, force_create_den_maps):
-        if not osp.exists(self.ori_dir_den):
-            os.makedirs(self.ori_dir_den)
-        elif not force_create_den_maps:
-            return
-        create_density_map(self.ori_dir_img, self.ori_dir_lab, self.ori_dir_den, mode = self.metadata['gt_mode'])
-
-    def _check_before_run(self):
-        """Check if all files are available before going deeper"""
-        if not osp.exists(self.root):
-            raise RuntimeError("'{}' is not available".format(self.root))
-        if not osp.exists(self.ori_dir):
-            raise RuntimeError("'{}' is not available".format(self.ori_dir))
-        if not osp.exists(self.ori_dir_img):
-            raise RuntimeError("'{}' is not available".format(self.ori_dir_img))
-        if not osp.exists(self.ori_dir_lab):
-            raise RuntimeError("'{}' is not available".format(self.ori_dir_lab))
-
-    def signature(self):
-        return "_".join(["{}_{}".format(sign_elem, self.metadata[sign_elem]) for sign_elem in self.signature_args])
-
-    def _create_train_test(self, force_augmentation, kwargs):
-        file_names = os.listdir(self.ori_dir_img)
-        file_names.sort()
-        train_test = train_test_unit(self.ori_dir_img, self.ori_dir_den, self.ori_dir_img, self.ori_dir_den, kwargs.copy())
-        self.train_test_set.append(train_test)
-
-#TODO: add class for synthetic dataset
-
-
 """Create dataset"""
 
 __factory = {
     'ucf-cc-50': UCF_CC_50,
-    'shanghai-tech': ShanghaiTech,
-    'random-background': random_background,
+    'shanghai-tech': ShanghaiTech
 }
 
 def get_names():

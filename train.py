@@ -40,7 +40,7 @@ parser.add_argument('--contrast', default=10, type=int, help="contrast value for
 parser.add_argument('--gt-mode', type=str, default='same', help="mode for generation of ground thruth.")
 
 # Optimization options
-parser.add_argument('--max-epoch', default=1200, type=int,
+parser.add_argument('--max-epoch', default=500, type=int,
                     help="maximum epochs to run")
 parser.add_argument('--start-epoch', default=0, type=int,
                     help="manual epoch number (useful on restarts)")
@@ -62,9 +62,6 @@ parser.add_argument('--units', type=str, default='', help="folds/parts units to 
 parser.add_argument('--augment-only', action='store_true', help="run only data augmentation, default False")
 parser.add_argument('--evaluate-only', action='store_true', help="run only data validation, --resume arg is needed, default False")
 parser.add_argument('--save-plots', action='store_true', help="save plots of density map estimation (done only in test step), default False")
-#parser.add_argument('--eval-step', type=int, default=-1,  help="run evaluation for every N epochs (set to -1 to test after training)")
-parser.add_argument('--debug', action='store_true', help="print infor for gradient debug, default False")
-parser.add_argument('--quad-level-stats', action='store_true', help="evaluate mse and mae for each level of quadtree")
 
 args = parser.parse_args()
 

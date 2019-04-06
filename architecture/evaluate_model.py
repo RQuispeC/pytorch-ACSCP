@@ -31,7 +31,7 @@ def evaluate_model(trained_model, data_loader, epoch = 0, save_test_results = Fa
         _, density_map = data_loader.recontruct_test(im_data_norm, density_map, orig_shape, new_shape)
         gt_count = np.sum(gt_data)
         et_count = np.sum(density_map)
-        print(">>>>>>gt {:.3f} es {:.3f}".format(gt_count, et_count))
+        print("image {} gt {:.3f} es {:.3f}".format(idx_data[0], gt_count, et_count))
         mae += abs(gt_count-et_count)
         mse += ((gt_count-et_count)*(gt_count-et_count))
 
