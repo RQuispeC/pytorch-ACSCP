@@ -1,6 +1,6 @@
 # Crowd Counting via Adversarial Cross-Scale Consistency Pursuit  IN PYTORCH (Unofficial)
 
-Implementation of CVPR 2O18 paper [Crowd Counting via Adversarial Cross-Scale](http://openaccess.thecvf.com/content_cvpr_2018/papers/Shen_Crowd_Counting_via_CVPR_2018_paper.pdf)
+Implementation of CVPR 2018 paper [Crowd Counting via Adversarial Cross-Scale](http://openaccess.thecvf.com/content_cvpr_2018/papers/Shen_Crowd_Counting_via_CVPR_2018_paper.pdf)
 
 ## 1. Environment
 
